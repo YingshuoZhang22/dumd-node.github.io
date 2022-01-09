@@ -5,97 +5,232 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Dandelion Diagram</title>
+    <style>
+        #parent {
+            width: 400px;
+            height: 20px;
+            background: #CCC;
+            position: relative;
+            margin: 20px auto;
+        }
+
+        #div1 {
+            width: 20px;
+            height: 20px;
+            background: rgb(0, 183, 255);
+            cursor: pointer;
+            position: absolute;
+        }
+    </style>
+    <script src ="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"> </script>
     <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
 </head>
 <body>
     <div>
-        <svg class = "canvas">
-        </svg>
+        <div id = "demo-div" style="text-align: center">
+        </div>
+        <div id="parent">
+            <div id="div1"></div>
+        </div>
     </div>
     <script type="text/javascript">
-        var svg_width = 1665, svg_height = 990;
-        var bg_url = 'background.png', data_url = 'https://raw.githubusercontent.com/itscaroline/dd/main/RangeTimeCriticalIncidents.xlsx%20-%20Sheet1.csv';
-        var dataset;
-        var x_bound = 13700, y_bound = 8150;
 
-        var svg = d3.select('svg').attr('width', svg_width)
-                .attr('height', svg_height);
+        var myrng = new Math.seedrandom('hello.');
+        console.log(myrng());                // Always 0.9282578795792454
+        console.log(myrng());  
+        console.log(myrng()); 
+
+        var svg_width = 1276, svg_height = 758;
+        var bg_url = 'background.png', data_url = 'https://raw.githubusercontent.com/itscaroline/dd/main/RangeTimeCriticalIncidents.xlsx%20-%20Sheet1.csv';
+        var raw_dataset;
+        var x_bound = 13700, y_bound = 8150;
+        var xScale = d3.scaleLinear().domain([0, x_bound]).range([0, svg_width]),
+            yScale = d3.scaleLinear().domain([0, y_bound]).range([0, svg_height]),
+            tScale;
+        var max_tm, min_tm;
+
+        var svg = d3.select('#demo-div').append('svg').attr('width', svg_width)
+                .attr('height', svg_height).attr('id', 'canva');
 
         svg.append('svg:image').attr('xlink:href', bg_url)
                 .attr('x', 0).attr('y', 0);
 
-        console.log(Array(10));
+
+
+
+        
         var convertColor = function(id) {
-            console.log(id);
             switch(id) {
                 case '26679':
-                    return 'magenta';
+                    return '#e41a1c';
                 case '26675':
-                    return 'blue';
+                    return '#377eb8';
                 case '28166':
-                    return 'green';
+                    return '#4daf4a';
                 case '26656':
-                    return 'red';
+                    return '#984ea3';
                 case '28266':
-                    //console.log(2);
-                    return 'grey';
+                    
+                    return '#999999';
                 case '28274':
-                    return 'yellow';
+                    return '#ffff33';
                 case '26689':
                     return;
                 default:
-                    console.log(id);
                     return 'orange';
             }
         }
 
         d3.csv(data_url, function(data) {
-            dataset = data.filter(function(x) {
-                return x.tracker !== '28266';
+            raw_dataset = data.filter(function(x) {
+                return x.tracker !== '26689';
             });
-            //console.log(dataset);
-            var xScale = d3.scaleLinear().domain([0, x_bound]).range([0, svg_width]),
-                yScale = d3.scaleLinear().domain([0, y_bound]).range([0, svg_height]);
 
+            var tmp = [];
+            for (var i = 0; i <= 500; i++) {
+                tmp.push(raw_dataset[i]);
+            }
+            raw_dataset = tmp;
+
+            for (var i = 0; i < raw_dataset.length; i++) {
+                var time = raw_dataset[i].timestamp[2] + '/' + raw_dataset[i].timestamp[0] + raw_dataset[i].timestamp.substr(3);
+                raw_dataset[i].ts = new Date(time).getTime() / 1000;
+                raw_dataset[i].newx = xScale(+raw_dataset[i].x);
+                raw_dataset[i].newy = yScale(+raw_dataset[i].y);
+            }
+            
+            max_tm = d3.max(raw_dataset, function(d) {return d.ts}), min_tm = d3.min(raw_dataset, function(d) {return d.ts});
+            
+            tScale = d3.scaleLinear().domain([min_tm, max_tm]).range([0, max_tm - min_tm]);
+            for (var i = 0; i < raw_dataset.length; i++) {
+                raw_dataset[i].time = tScale(raw_dataset[i].ts);
+            }
+            
+            draw((max_tm - min_tm) * 0);
+            
+        });
+
+        var draw = function draw_graph(bound) {
+            var dataset = [];
+            for (var i = 0; i < raw_dataset.length; i++) {
+                
+                if (raw_dataset[i].time <= bound)
+                    dataset.push(raw_dataset[i]);
+            }
+            
             svg.selectAll("circle")
                 .data(dataset)
                 .enter()
                 .append("circle")
                 .attr("cx", function(datum, i){
-                    var xcoord = xScale(+datum.x);
-                    if (xcoord < 0 || xcoord > svg_width) {
-                        //console.log(i);
-                    }
-                    return xcoord;
+                    return datum.newx;
                 })
                 .attr("cy", function(datum, i) {
-                    //console.log(yScale(datum.y));
-                    var ycoord = yScale(+datum.y);
-                    if (ycoord < 0 || ycoord > svg_height) {
-                        // console.log(i);
-                        // console.log(+datum.y);
-                    }
-                    return ycoord;
+                    return datum.newy;
                 })
                 .attr("r", 1.25)
                 .style("fill", function(datum) {
                     //console.log(datum.tracker);
                     return convertColor(datum.tracker);
                 });
-        });
-        
-            // var line = function(datum) {
-            //     return d3.line()
-            //         .x(function(datum) { return xScale(+datum.x);})
-            //         .y(function(datum) { return yScale(+datum.y)}); 
-            // }
-            //         d3.line()
-   
-            //         });
-            // svg.append("path").attr("d", function(d));
+
+                
+
+                var line = d3.line()
+                            .x(function(d) {return d.newx; })
+                            .y(function(d) {return d.newy; });
+                
+                for (var i = 0; i < dataset.length - 1; i++) {
+                    var temp_data = [];
+                    temp_data.push(dataset[i]), temp_data.push(dataset[i+1]);
+                    svg.append("path")
+                        .datum(temp_data)   // datum bind data to each SVG, don't decompose it
+                        .attr("d", function(d) {return line(d);})
+                        .attr("class", "line")
+                        .attr("stroke-width", 0.15)
+                        .style("stroke", function(d) {
+                            return convertColor(d[0].tracker);
+                        })
+                        .attr('fill', 'none')
+                        .style('opacity', 0.7);
+                }
+                
+
+                
+                // draw triangle Spotlight metaphor
+                for (var i = 0; i < dataset.length; i++) {
+                    var grad = svg.append("defs") 
+                            .append("linearGradient")
+                            .attr("id", "grad" + i)
+                            .attr('x1', '0%')
+                            .attr('x2', '0%')
+                            .attr('y1', '0%')
+                            .attr('y2', '100%');
+
+                    grad.append("stop")
+                        .attr("offset", "0%")
+                        .attr('stop-color', function(d) {return convertColor(dataset[i].tracker)})
+                        .attr("stop-opacity", 0);
+
+                    grad.append("stop")
+                        .attr("offset", "100%")
+                        .attr('stop-color', function(d) {return convertColor(dataset[i].tracker)})
+                        .attr("stop-opacity", 0.05);
+                    
+                    svg.append('polygon')
+                        .attr('points', '0,0 20,-60 -20,-60')
+                        // .attr('transform', 'translate(50, 50) rotate(271)') 
+                        .attr('transform', 'translate(' + dataset[i].newx + ', ' + dataset[i].newy + ') rotate(' + dataset[i].rotation + ')')
+                        //.attr('fill', function(d) {return convertColor(dataset[i].tracker)})
+                        .attr('fill', 'url(#grad' + i + ')')
+    
+            }
+        }
 
 
+        window.onload = function () {
+        var oDiv = document.getElementById('div1');
+        var oParent = document.getElementById('parent');
+
+        oDiv.onmousedown = function (ev) {
+            $("#canva").empty();
+            d3.select('#canva').append('svg:image').attr('xlink:href', bg_url)
+                .attr('x', 0).attr('y', 0);
+
+            
+            var oEvent = ev || event;
+            //计算鼠标相对滑块上的位置
+            var disX = oEvent.clientX - oDiv.offsetLeft;
+
+            document.onmousemove = function (ev) {
+                $("#canva").empty();
+                d3.select('#canva').append('svg:image').attr('xlink:href', bg_url).attr('x', 0).attr('y', 0);
+                var oEvent = ev || event;
+                //计算滑块的动态left值
+                var l = oEvent.clientX - disX;
+
+                //限制拖拽范围
+                if (l < 0) { l=0; } else if (l> oParent.offsetWidth - oDiv.offsetWidth) {
+
+                l = oParent.offsetWidth - oDiv.offsetWidth;
+                }
+
+                oDiv.style.left = l + 'px';
+
+                //计算拖拽移动距离与可拖动总范围的比例
+                var scale = l / (oParent.offsetWidth - oDiv.offsetWidth);
+                draw((max_tm - min_tm) * scale);
+            };
+
+                document.onmouseup = function () {
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            };
+        };
     </script>
 </body>
 </html>
