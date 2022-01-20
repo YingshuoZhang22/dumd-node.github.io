@@ -24,40 +24,66 @@
             cursor: pointer;
             position: absolute;
         }
+        #demo-div {
+            margin: 10px, blue;
+        }
+        #xaxis {
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
+
+        #brushArea {
+            stroke: black;
+            fill: greenyellow;
+            fill-opacity: .6;
+        /* shape-rendering: crispEdges; */
+        }
     </style>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/css/bootstrap.min.css">  
+    <script src="https://cdn.staticfile.org/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <script src ="https://cdnjs.cloudflare.com/ajax/libs/seedrandom/3.0.5/seedrandom.min.js"> </script>
-    <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+    <script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
 </head>
 <body>
     <div>
-        <div id = "demo-div" style="text-align: center">
-        </div>
-        <div id="parent">
-            <div id="div1"></div>
-        </div>
+        <div id = "demo-div" style="text-align: center"></div>
+        
+        <button class="btn btn-primary" type="submit" id = "b1">Session1</button>
+        <button class="btn btn-primary" type="submit" id = "b2">Session2</button>
+        <button class="btn btn-primary" type="submit" id = "b3">Session3</button>
+        <button class="btn btn-primary" type="submit" id = "b4">Session4</button>
+        <button class="btn btn-primary" type="submit" id = "b5">Session5</button>
     </div>
     <script type="text/javascript">
 
         var myrng = new Math.seedrandom('hello.');
-        console.log(myrng());                // Always 0.9282578795792454
-        console.log(myrng());  
-        console.log(myrng()); 
 
-        var svg_width = 1276, svg_height = 758;
+
+        var svg_width = 1276 * 1.5, svg_height = 758 * 1.25;
+        var pic_width = 1276, pic_height = 758;
+        var x_offset = (svg_width - pic_width) / 2, y_offset = 50;
         var bg_url = 'background.png', data_url = 'https://raw.githubusercontent.com/itscaroline/dd/main/RangeTimeCriticalIncidents.xlsx%20-%20Sheet1.csv';
-        var raw_dataset;
+        var raw_dataset, dataset = [], data1 = [], data2 = [], data3 = [], data4 = [], data5 = [];
         var x_bound = 13700, y_bound = 8150;
-        var xScale = d3.scaleLinear().domain([0, x_bound]).range([0, svg_width]),
-            yScale = d3.scaleLinear().domain([0, y_bound]).range([0, svg_height]),
+        var xScale = d3.scale.linear().domain([0, x_bound]).range([0 + x_offset, pic_width + x_offset]),
+            yScale = d3.scale.linear().domain([0, y_bound]).range([0 + y_offset, pic_height + y_offset]),
             tScale;
         var max_tm, min_tm;
+        var xScale;
+        var brush;
+        var cur_data_idx = -1;
 
         var svg = d3.select('#demo-div').append('svg').attr('width', svg_width)
                 .attr('height', svg_height).attr('id', 'canva');
 
+        var canvas = svg.append("g");
+                        //.attr("id", "paper");
+                        
         svg.append('svg:image').attr('xlink:href', bg_url)
-                .attr('x', 0).attr('y', 0);
+                .attr('x', x_offset).attr('y', y_offset).attr("border", 1)
 
 
 
@@ -66,16 +92,15 @@
         var convertColor = function(id) {
             switch(id) {
                 case '26679':
-                    return '#e41a1c';
+                    return 'red';
                 case '26675':
-                    return '#377eb8';
+                    return 'blue';
                 case '28166':
-                    return '#4daf4a';
+                    return 'green';
                 case '26656':
-                    return '#984ea3';
+                    return 'purple';
                 case '28266':
-                    
-                    return '#999999';
+                    return 'gray';
                 case '28274':
                     return '#ffff33';
                 case '26689':
@@ -89,13 +114,6 @@
             raw_dataset = data.filter(function(x) {
                 return x.tracker !== '26689';
             });
-
-            var tmp = [];
-            for (var i = 0; i <= 500; i++) {
-                tmp.push(raw_dataset[i]);
-            }
-            raw_dataset = tmp;
-
             for (var i = 0; i < raw_dataset.length; i++) {
                 var time = raw_dataset[i].timestamp[2] + '/' + raw_dataset[i].timestamp[0] + raw_dataset[i].timestamp.substr(3);
                 raw_dataset[i].ts = new Date(time).getTime() / 1000;
@@ -105,22 +123,32 @@
             
             max_tm = d3.max(raw_dataset, function(d) {return d.ts}), min_tm = d3.min(raw_dataset, function(d) {return d.ts});
             
-            tScale = d3.scaleLinear().domain([min_tm, max_tm]).range([0, max_tm - min_tm]);
+            tScale = d3.scale.linear().domain([min_tm, max_tm]).range([0, max_tm - min_tm]);
             for (var i = 0; i < raw_dataset.length; i++) {
                 raw_dataset[i].time = tScale(raw_dataset[i].ts);
+                if (raw_dataset[i].newx < 0 + x_offset || raw_dataset[i].newx > x_bound + x_offset || raw_dataset[i].newy < 0 + y_offset || raw_dataset[i].newy > y_bound + y_offset) {
+                    continue;
+                }
+                    
+               
+                if (raw_dataset[i].session == 'S1') {
+                    data1.push(raw_dataset[i]);
+                } else if (raw_dataset[i].session == 'S2') {
+                    data2.push(raw_dataset[i]);
+                } else if (raw_dataset[i].session == 'S3') {
+                    data3.push(raw_dataset[i]);
+                } else if (raw_dataset[i].session == 'S4') {
+                    data4.push(raw_dataset[i]);
+                } else {
+                    data5.push(raw_dataset[i]);
+                }
             }
             
-            draw((max_tm - min_tm) * 0);
+            document.getElementById('b1').click();
             
         });
 
         var draw = function draw_graph(bound) {
-            var dataset = [];
-            for (var i = 0; i < raw_dataset.length; i++) {
-                
-                if (raw_dataset[i].time <= bound)
-                    dataset.push(raw_dataset[i]);
-            }
             
             svg.selectAll("circle")
                 .data(dataset)
@@ -140,7 +168,7 @@
 
                 
 
-                var line = d3.line()
+                var line = d3.svg.line()
                             .x(function(d) {return d.newx; })
                             .y(function(d) {return d.newy; });
                 
@@ -158,8 +186,6 @@
                         .attr('fill', 'none')
                         .style('opacity', 0.7);
                 }
-                
-
                 
                 // draw triangle Spotlight metaphor
                 for (var i = 0; i < dataset.length; i++) {
@@ -191,46 +217,106 @@
             }
         }
 
-
-        window.onload = function () {
-        var oDiv = document.getElementById('div1');
-        var oParent = document.getElementById('parent');
-
-        oDiv.onmousedown = function (ev) {
+        var clearSVG = function() {
             $("#canva").empty();
             d3.select('#canva').append('svg:image').attr('xlink:href', bg_url)
-                .attr('x', 0).attr('y', 0);
+                .attr('x', x_offset).attr('y', y_offset);
+        }
 
+        function brushed() {
             
-            var oEvent = ev || event;
-            //计算鼠标相对滑块上的位置
-            var disX = oEvent.clientX - oDiv.offsetLeft;
-
-            document.onmousemove = function (ev) {
-                $("#canva").empty();
-                d3.select('#canva').append('svg:image').attr('xlink:href', bg_url).attr('x', 0).attr('y', 0);
-                var oEvent = ev || event;
-                //计算滑块的动态left值
-                var l = oEvent.clientX - disX;
-
-                //限制拖拽范围
-                if (l < 0) { l=0; } else if (l> oParent.offsetWidth - oDiv.offsetWidth) {
-
-                l = oParent.offsetWidth - oDiv.offsetWidth;
+            var bound = brush.empty() ? xScale.domain() : brush.extent();
+            var left = bound[0], right = bound[1];
+            var tmp;
+            if (cur_data_idx == 1) {
+                tmp = data1;
+            } else if (cur_data_idx == 2) {
+                tmp = data2;
+            } else if (cur_data_idx == 3) {
+                tmp = data3;
+            } else if (cur_data_idx == 4) {
+                tmp = data4;
+            } else if (cur_data_idx == 5) {
+                tmp = data5;
+            } 
+            console.log(tmp);
+            var to_draw = [];
+            for (var i = 0; i < tmp.length; i++) {
+                if (tmp[i].ts >= left && tmp[i].ts <= right) {
+                    to_draw.push(tmp[i]);
                 }
+            }
+            dataset = to_draw;
+            console.log(to_draw);
+            clearPic();
+            draw();
+        }
 
-                oDiv.style.left = l + 'px';
+        var draw_axis = function() {
+            max_tm = d3.max(dataset, function(d) {return d.ts}), min_tm = d3.min(dataset, function(d) {return d.ts});
+            for (var i = 0; i < dataset.length; i++) {
+                dataset[i].ts -= min_tm;
+            }
+            xScale = d3.scale.linear().domain([0, max_tm - min_tm]).range([0, pic_width]);
+            console.log(min_tm);
+            var xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+            var axis = svg.append("g")
+                .attr("id", "xaxis")
+                .attr("class", "axis")
+                .attr("transform", "translate(" + (svg_width - pic_width) / 2 + "," + (svg_height - 50) + ")")
+                .call(xAxis);
+            // focus.append("g")
+            //     .attr("class", "x axis")
+            //     .attr("transform", "translate(0," + 0 + ")")
+            //     .call(xAxis);
+           brush = d3.svg.brush()
+                            .x(xScale)
+                            //.extent([100, 200], [800, 900])
+                            .on("brush", brushed);
 
-                //计算拖拽移动距离与可拖动总范围的比例
-                var scale = l / (oParent.offsetWidth - oDiv.offsetWidth);
-                draw((max_tm - min_tm) * scale);
-            };
+           var context = svg.append("g")
+                            .attr("class", "context")
+                           // .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+            d3.select("#xaxis")
+               .call(brush)
+               .selectAll("rect")
+               .attr("id", "brushArea")
+               .attr("y", -31)
+               .attr("height", 30);
+        }
 
-                document.onmouseup = function () {
-                    document.onmousemove = null;
-                    document.onmouseup = null;
-                };
-            };
+        var clearPic = function() {
+            d3.selectAll('circle').remove();
+            d3.selectAll('polygon').remove();
+            d3.selectAll('path').remove();
+        }
+
+
+        document.getElementById("b1").onclick=function(){
+            dataset = data1, clearSVG(), draw(), cur_data_idx = 1;
+            // tScale = d3.scale.linear().domain([min_tm, max_tm]).range([0, max_tm - min_tm]);
+            draw_axis();
+        };
+        document.getElementById("b2").onclick=function(){
+            dataset = data2, clearSVG(), draw(), cur_data_idx = 2;
+            draw_axis();
+        };
+        document.getElementById("b3").onclick=function(){
+            dataset = data3, clearSVG(), draw(), cur_data_idx = 3;
+            draw_axis();
+        };
+        document.getElementById("b4").onclick=function(){
+            dataset = data4, clearSVG(), draw(), cur_data_idx = 4;
+            draw_axis();
+        };
+        document.getElementById("b5").onclick=function(){
+            dataset = data5, clearSVG(), draw(), cur_data_idx = 5;
+            draw_axis();
+        };
+        
+
+        window.onload = function () {
+            
         };
     </script>
 </body>
