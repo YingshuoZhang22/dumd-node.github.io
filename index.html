@@ -154,6 +154,7 @@
                 .data(dataset)
                 .enter()
                 .append("circle")
+                .attr("class", "element")
                 .attr("cx", function(datum, i){
                     return datum.newx;
                 })
@@ -179,6 +180,7 @@
                         .datum(temp_data)   // datum bind data to each SVG, don't decompose it
                         .attr("d", function(d) {return line(d);})
                         .attr("class", "line")
+                        .attr("class", "element")
                         .attr("stroke-width", 0.15)
                         .style("stroke", function(d) {
                             return convertColor(d[0].tracker);
@@ -209,6 +211,7 @@
                     
                     svg.append('polygon')
                         .attr('points', '0,0 20,-60 -20,-60')
+                        .attr("class", "element")
                         // .attr('transform', 'translate(50, 50) rotate(271)') 
                         .attr('transform', 'translate(' + dataset[i].newx + ', ' + dataset[i].newy + ') rotate(' + dataset[i].rotation + ')')
                         //.attr('fill', function(d) {return convertColor(dataset[i].tracker)})
@@ -286,9 +289,10 @@
         }
 
         var clearPic = function() {
-            d3.selectAll('circle').remove();
-            d3.selectAll('polygon').remove();
-            d3.selectAll('path').remove();
+            d3.selectAll('.element').remove();
+            // d3.selectAll('circle').remove();
+            // d3.selectAll('polygon').remove();
+            // d3.selectAll('path').remove();
         }
 
 
