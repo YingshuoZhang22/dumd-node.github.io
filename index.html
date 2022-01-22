@@ -119,6 +119,7 @@
                 raw_dataset[i].ts = new Date(time).getTime() / 1000;
                 raw_dataset[i].newx = xScale(+raw_dataset[i].x);
                 raw_dataset[i].newy = yScale(+raw_dataset[i].y);
+                raw_dataset[i].color = convertColor(raw_dataset[i].tracker);
             }
             
             max_tm = d3.max(raw_dataset, function(d) {return d.ts}), min_tm = d3.min(raw_dataset, function(d) {return d.ts});
@@ -164,7 +165,7 @@
                 .attr("r", 1.25)
                 .style("fill", function(datum) {
                     //console.log(datum.tracker);
-                    return convertColor(datum.tracker);
+                    return datum.color;
                 });
 
                 
@@ -183,7 +184,8 @@
                         .attr("class", "element")
                         .attr("stroke-width", 0.15)
                         .style("stroke", function(d) {
-                            return convertColor(d[0].tracker);
+                            return d[0].color;
+                            //return convertColor(d[0].tracker);
                         })
                         .attr('fill', 'none')
                         .style('opacity', 0.7);
@@ -201,7 +203,10 @@
 
                     grad.append("stop")
                         .attr("offset", "0%")
-                        .attr('stop-color', function(d) {return convertColor(dataset[i].tracker)})
+                        .attr('stop-color', function(d) {
+                            return dataset[i].color;
+                            //return convertColor(dataset[i].tracker)s
+                        })
                         .attr("stop-opacity", 0);
 
                     grad.append("stop")
@@ -290,9 +295,9 @@
 
         var clearPic = function() {
             d3.selectAll('.element').remove();
-            // d3.selectAll('circle').remove();
-            // d3.selectAll('polygon').remove();
-            // d3.selectAll('path').remove();
+            for (var i = 0; i < dataset.length; i++) {
+                d3.select('#grad' + i).remove();
+            }
         }
 
 
